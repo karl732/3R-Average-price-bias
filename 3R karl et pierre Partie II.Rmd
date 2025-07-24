@@ -1,0 +1,744 @@
+---
+title: |
+  \Huge\textbf{3R: Prix pratiqués et prix perçus (Average price bias)}
+  \vspace{0.5cm}
+date: |
+  \textbf{08 Avril 2024}
+output:
+  pdf_document:
+    df_print: kable
+    highlight: tango
+    toc: yes
+    toc_depth: 3
+  word_document:
+    toc: yes
+    toc_depth: '3'
+header-includes:
+- \usepackage{fancyhdr}
+- \usepackage{graphicx}
+- \usepackage{array}
+- \usepackage{color}
+- \usepackage{colortbl}
+- \usepackage{booktabs}
+- \usepackage{bbm}
+- \usepackage[utf8]{inputenc}
+- \usepackage{titling}
+- \usepackage{tikz}
+- \usepackage{soul}
+- \usepackage[most]{tcolorbox}
+- \tcbuselibrary{skins,breakable}
+- \definecolor{newblack}{RGB}{0, 0, 0}
+- \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+- \pretitle{\begin{center}\LARGE\textsc{Master économiste D'entreprise}\\\vspace{5mm}\centering\includegraphics[width=5cm]{logomecen2.jpg}\\\vspace{0.5mm}\centering\includegraphics[width=7cm]{univ2.jpg}\\\vspace{5mm}\normalsize\textsc{Recherche, Réalisation, Restitution}\vspace{5mm}\\\noindent\rule{17cm}{2pt}\\\vspace{5mm}}
+- \posttitle{\end{center}\rule{17cm}{2pt}\vspace{20mm}\begin{center}\begin{minipage}[t]{.45\linewidth}\centering\text{SONDEJI Karl et JEAN Pierre}\\\vspace{5mm}\text{Promotion 2023}\end{minipage}\hfill\begin{minipage}[t]{.45\linewidth}\centering\text{Université de Tours}\\\vspace{5mm}\text{M. Bousquet Alain}\vspace{15mm}\end{minipage}\end{center}}
+
+toc-title: \hypertarget{contents}{}\newpage{\textcolor{newblack}Table des matières :}
+line-height: 1.75
+colorlinks: yes
+geometry: margin=2cm
+fontsize: 12pt
+editor_options:
+  chunk_output_type: inline
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\pagestyle{fancy}
+\fancyhead[CE,CE]{Your Document Header}
+\fancyfoot[L]{\includegraphics[width=1.3cm]{logomecen2.jpg}}
+\fancyfoot[C]{- Average price bias -}
+\fancyfoot[R]{\hyperlink{contents}{\color{newblack}\textbf{\thepage}}}
+\renewcommand{\headrulewidth}{0.5pt}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, sanitize = TRUE, echo = FALSE, cache = TRUE)
+```
+
+```{r}
+library(FactoMineR)
+library(factoextra)
+library(graphics)
+library(ggplot2)
+library(tinytex)
+library(dplyr)
+library(DT)
+library(ggpubr)
+library(questionr)
+library(tikzDevice)
+library(ggthemes)
+library(patchwork)
+library(visdat)
+theme_set(theme_minimal())
+```
+
+```{r}
+data<-read.csv("questionnairetarificationdeleau.csv")
+```
+
+```{r}
+data<-data[,-1]
+```
+
+```{r}
+colnames(data) <- c("Type_logement", "Lieu_residence", "Prix_eau_m3", "prix_m3",
+                    "depense_annuelle_en_eau",
+                    "Partie_fixe_facture", "Consommation_annuelle_m3", 
+                    "Prix_eau_progressif",
+                    "Efforts_reduction_eau")
+```
+
+
+\newpage 
+
+# Introduction 
+
+
+Le modèle standard microéconomique prévoit que les consommateurs optimisent leur utilité sur la base du prix marginal, il suppose donc que le prix perçu et le prix marginal sont identiques aux yeux des consommateurs. Les données empiriques elles, suggèrent que les consommateurs confrontés à des prix non linéaires font souvent des choix basés sur la moyenne (et non sur la marge), ces derniers sont donc sujets à un biais vers le prix moyen. 
+
+\vspace{1em}
+Compte tenu de ce comportement nous sommes en droit de nous demander, qu'est-ce que le biais vers le prix moyen?  
+Quelles sont ses conséquences sur la demande et sur la tarification optimale des entreprises?  
+\vspace{1.5em}
+
+Le développement impressionnant de l'E-commerce permet aujourd'hui aux offreurs de pratiquer une tarification encore plus dynamique, soit de fixer en temps réel des prix différents pour un même produit en fonction de facteurs divers tels que, la localisation géographique, l'heure de la journée, la disponibilité etc.
+L'arrivée du Big Data a permis aux offreurs de discriminer encore mieux les prix entre clients, celui-ci étant de plus en plus personnalisé (proche de la disposition maximale à payer de chacun).
+
+La disposition à payer des consommateurs (WTP) pour un bien ou un service est fonction de deux facteurs, leurs préférences d'une part, et de leur perception du prix (valeur) du bien (service) qu'ils consomment.
+
+Lorsque la discrimination par les prix cible les préférences elle nuit aux consommateurs mais rend le marché plus efficient de manière générale. Les consommateurs subissent un préjudice parce que le vendeur (un monopoleur ou tout vendeur disposant d'un pouvoir de marché suffisant pour s'engager dans une discrimination par les prix) extrait la totalité du surplus en fixant un prix juste en dessous de la WTP de chaque consommateur. L’efficacité est accrue parce que la discrimination par les prix élimine la perte sèche du monopole. Mais lorsque la discrimination par les prix cible les perceptions, en l'occurence erronées (qui gonflent la demande), cela nuit encore plus aux consommateurs, mais cette fois-ci cela fait diminuer l'efficacité du marché. Le préjudice causé aux consommateurs augmente parce que ceux-ci paient un prix égal au bénéfice perçu, qui dépasse leur bénéfice réel.
+
+\vspace{1em}
+L'objectif du producteur est de maximiser son profit, et dans ce but il va chercher à pratiquer une discrimination par les prix : fixer des prix plus élevés pour les consommateurs prêts à payer plus et des prix plus bas pour les consommateurs prêts à payer moins. Un exemple historique est le prix des billets de train. En fixant un prix plus élevé pour les voyageurs en classe affaires et un prix plus bas pour les voyageurs d'agrément, les compagnies de train pouvaient ainsi discriminer le type de passager. Aujourd'hui l'augmentation du nombre de données disponibles permet une segmentation plus fine de la clientèle, les entreprises sont donc en mesure d'identifier des sous-catégories de consommateurs de plus en plus homogènes, voire même dans certains cas à fixer des prix personnalisés, c'est-à-dire un prix différent pour chaque consommateur.
+
+\vspace{4em}
+Cette discrimination repose sur la capacité de l'entreprise à pouvoir identifier la disposition maximale à payer du consommateur. Pour aider les entreprises dans cet objectif, de nouveaux acteurs, des intermédiaires, sont apparus dans le but exprès d'identifier la disposition à payer (WTP) des consommateurs et de vendre ces informations aux détaillants qui l'utilisent ensuite pour discriminer les prix, on appelle ces entreprises des courtiers en données, c'est le cas par exemple de Datalogix.
+
+\vspace{1em}
+Il a été constaté que B&Q, une multinationale britannique, a testé dans ses magasins physiques des étiquettes de prix numériques interfacées avec les téléphones des clients et a ajusté le prix affiché en fonction des données des cartes de fidélité et des habitudes de dépenses du client, ou encore qu'Allstate a optimisé les prix en fonction de la probabilité calculée que les utilisateurs individuels feraient des comparaisons avant de souscrire une assurance. Une étude récente a révélé que de nombreux détaillants et sites de voyage fixent des prix personnalisés qui varient de plusieurs centaines de dollars d'un consommateur à l'autre.
+
+
+\newpage
+
+# 1) Revue de littérature
+
+## 1.1 La notion de prix perçu dans la littérature
+
+De manière très étendue la notion de prix perçu intervient dans bien des disciplines, notamment en sociologie ou encore en philosophie, dans ces domaines la notion de prix dépasse la simple évaluation monétaire d'un produit et questionne davantage la manière dont les individus attribuent de la valeur à un bien de manière plus conceptuelle, et ce en caractérisant davantage les fondements du processus de valorisation d'un bien. 
+
+\vspace{1em}
+Par exemple dans le livre intitulé "Les mots justes"(2010), les philosophes Bernard Caussin et Claude Saliceti, présentent le jugement de la valeur d'un bien comme une appréciation de l'importance d'un objet par référence à une norme et par référence au besoin que celui-ci vient combler. 
+
+\vspace{1em}
+Dans l'article de gestion managériale "Comment améliorer l'estimation du gain perçu et de l'efficacité commerciale?" (2019), Agnès Walser-Luchesi voit la réduction des prix comme un outil d'optimisation commerciale à la disposition des managers leur parmettant de se jouer des perceptions des consommateurs. C'est-à-dire que selon la forme de présentation des prix, l'estimation du gain perçu en euros conduit à une inexactitude ce qui n'est pas le cas du gain réalisé en pourcentage. Par exemple pour un article de 60 euros, une réduction de 20% équivaut à un gain de 12 euros, cette simple conversion n'est pas toujours réalisée par les consommateurs.
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{anchoring-bias pt.1.png}
+    \caption{Sans la promotion}
+  \end{minipage}
+  \hspace{0.5cm} % space between the images
+  \begin{minipage}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{anchoring-bias pt.2.png}
+    \caption{Avec la promotion}
+  \end{minipage}
+\end{figure}
+
+\newpage
+
+## 1.2 La notion de prix perçu en économétrie
+
+Comme nous l'avons vu précédemment le biais de perception est un concept assez vaste, à l'intérieur de ce concept on retrouve le biais vers le prix moyen. À présent, voyons comment cette notion de biais vers le prix moyen a été traitée en économétrie et en tarification optimale.
+
+### Un continuum de comportements
+
+\vspace{1em}
+Commençons par parler de l'article \textit{"To what electricity price do consumers respond?"} (2019), dans lequel Severin Borenstein analyse la réaction des ménages de Californie du Sud face à des barèmes de prix par blocs croissants. 
+\vspace{1.5em}
+
+```{r fig.align='center', out.width="80%"}
+knitr::include_graphics("Average-Cost vs marginal.jpg")
+```
+
+
+
+\vspace{1em}
+L'auteur met principalement en avant le fait que, dans la réalité, les consommateurs prennent des décisions avec des informations limitées et que dans de telles circonstances leur comportement peut s'écarter considérablement du modèle d'optimisation parfaite, cette hypothèse est confirmée par les données qui ne concordent pas avec l'hypothèse d'optimisation parfaite.
+
+\vspace{1em}
+Dans cet article Severin Borenstein affirme plutôt qu'il existe un continuum de types de décision des consommateurs, chacune avec des implications importantes pour la conception des structures tarifaires, et fait l'hypothèse que les consommateurs contraignent leurs consommations en se fixant des règles comportementales ce qui les conduits parfois à faire des sous choix optimaux. Comme par exemple le cas de la consommation d'électricité le fait d'éclairer une seule pièce à la fois, de baisser d'un degré le chauffage électrique ou encore de porter des vêtements plus chauds à la maison. Dans cet article il se concentre sur trois modèles de réponse en particulier: les consommateurs répondant au prix marginal observé, au prix marginal attendu et au prix moyen.
+
+\newpage
+
+### Démontrer l'existence d'un biais vers le prix moyen
+
+Koichiro Ito quant à lui va également se concentrer sur ces trois possibilités concernant le prix perçu: le prix marginal, le prix marginal attendu (en présence d'incertitudes sur les revenus) et le prix moyen, et dans son article d'économétrie appliquée "Do consumers respond to non-linear pricing?" (2014), et va tenter de démontrer empiriquement que les consommateurs sont dues à un biais vers le prix moyen du fait de perceptions erronées.
+
+\vspace{1em}
+Les modèles des ensembles budgétaires non-linéaires supposent que le prix marginal est identique au prix perçu, ces modèles se reposent sur 2 hypothèses :
+
+- Les consommateurs n'ont aucune incertitude sur leurs revenus
+
+- Les consommateurs comprennent parfaitement la structure des barèmes non-linéaires
+
+Ces hypothèses ne sont pas toujours vraies dans la réalité :
+
+- Les consommateurs subissent souvent des  chocs aléatoires sur leurs revenus (primes, dividendes etc..) ou peuvent faire face à des imprévus météorologiques etc., et en présence de ces incertitudes ils vont se baser sur un prix marginal attendu.
+
+- Pour la deuxième hypothèse, si le coût cognitif de la compréhension du barème des prix est trop important, les consommateurs se baseront sur le prix moyen du paiement total comme approximation du prix marginal.
+
+\vspace{1em}
+Koichiro Ito va donc chercher à démontrer empiriquement l'existence de ce biais.
+Car si les consommateurs réagissent au prix moyen, alors des tarifs linéaires entraînent une légère augmentation de la consommation globale par rapport à un autre type de tarif (tarif binôme par exemple), or un régulateur (l'état), pour des raisons politiques et/ou sociales, va chercher à vouloir contrôler ces effets.
+
+\newpage
+
+### L'impact de la tarification sur la consommation
+
+Dans l'article d'économie expérimentale ”Does price matter?” (2009), Shanthi Nataraj analyse l'impact de la structure tarifaire en blocs croissants (IBT) sur la consommation d'électricité des ménages et de l'effet de l'information sur le comportement des consommateurs. L'IBT est une structure tarifaire couramment utilisée aux États-Unis où le prix marginal de l'électricité augmente en fonction de la quantité d'électricité consommée au cours du mois selon des paliers prédéfinis à l'avance. Les consommateurs qui consomment plus d'électricité paient un prix marginal plus élevé que ceux qui en consomment moins.
+
+![Barème de prix par blocs croissants](Increasing block tariff structure.png){width="40%"}
+
+\vspace{1em}
+L'étude se penche sur les conditions nécessaires pour que la structure tarifaire IBT incite effectivement les consommateurs à réduire leur consommation. Pour que cela fonctionne, les consommateurs doivent comprendre comment leur facture d'électricité est calculée, connaître leur prix marginal mensuel et comprendre comment leurs actions de consommation se traduisent en kilowattheures (Kwh) et en coûts sur leur facture.
+
+\vspace{1em}
+Les auteurs ont mené une expérience sur le terrain en partenariat avec deux services publics d'électricité de Californie pour évaluer l'effet de la fourniture d'informations sur le comportement des consommateurs. Ils ont fourni à un groupe de consommateurs une formation en ligne qui expliquait comment leur facture était calculée, quel était leur prix marginal typique et comment leurs actions de consommation se traduisaient en coûts. Les résultats de l'expérience ont montré que les consommateurs qui ont reçu cette formation ont réduit leur consommation, en particulier ceux dont le prix marginal était plus élevé que la moyenne.
+
+\vspace{1em}
+Dans cette section, l'article présente deux modèles de comportement de consommation d'électricité au niveau du consommateur, l'un sous tarification linéaire et l'autre sous tarification non linéaire ou tarification progressive par tranches croissantes (IBT). L'article se concentre sur l'impact de la prise de connaissances des consommateurs de leur prix marginal mensuel typique et la manière dont cela affecte leur consommation d'électricité.
+
+\vspace{1em}
+Dans le cas de la tarification linéaire, le consommateur fait face au même prix marginal pour toutes les unités consommées. Le problème de maximisation de l'utilité du consommateur est décrit, en tenant compte de la contrainte budgétaire et des préférences. On suppose que le consommateur croit qu'il fait face à un prix moyen de l'électricité, et la solution de ce problème conduit à un certain niveau de consommation d'électricité, noté E*.
+
+\vspace{1em}
+Dans le cas de la tarification IBT, le consommateur est soumis à une structure de tarification à deux paliers, avec un prix marginal de p1 pour la consommation jusqu'à E1 et un prix marginal plus élevé de p2 pour la consommation dépassant E1. Si le consommateur croit que son prix moyen est pA, qui se situe entre p1 et p2, il choisira un certain niveau de consommation d'électricité, E*. La condition du premier ordre pour la maximisation de l'utilité est discutée.
+
+\newpage
+
+### Etude naturelle de l'impact de la tarification sur la consommation
+
+Dans cette même dynamique, on retrouve également l'article de Blake Schaffer ”Rational, lazy or confused” (2018), ce document examine comment les consommateurs réagissent aux tarifs non linéaires, en particulier ceux de l'électricité en Colombie-Britannique. L'auteur constate que certains ménages semblent mal comprendre ces tarifs, en pensant que le prix marginal s'applique à toute leur consommation, et non seulement à l'augmentation. Bien que ces ménages soient minoritaires, ils ont un impact important en masquant la réponse prédominante au prix moyen. Cette mécompréhension a des implications économiques et politiques significatives, allant au-delà du marché de l'électricité.
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{non-linear price.png}
+    \caption{non-linear price}
+  \end{minipage}
+  \hspace{0.5cm} % space between the images
+  \begin{minipage}[b]{0.45\linewidth}
+    \includegraphics[width=\linewidth]{water-marginal-willingness-to-pay.png}
+    \caption{marginal-willingness-to-pay}
+  \end{minipage}
+\end{figure}
+
+\vspace{1em}
+L'auteur utilise des données provenant d'une expérience naturelle où l'entreprise d'électricité BC Hydro a modifié ses tarifs en 2008, créant un groupe témoin avec la ville de New Westminster qui est restée sur un tarif plat. Les données couvrent une période de 2005 à 2013 et montrent que la plupart des ménages répondent au coût moyen, tandis qu'une petite part réagit au coût marginal et une autre petite part semble mal comprendre le fonctionnement des tarifs non linéaires. Ces ménages confus ont un effet significatif sur les résultats agrégés, entraînant des pertes de bien-être importantes.
+
+\vspace{1em}
+En Colombie-Britannique, la principale entreprise d'électricité est BC Hydro, qui dessert plus de 95 % de la demande en électricité de la province. En octobre 2008, BC Hydro a introduit un tarif résidentiel à paliers croissants, dans le but de promouvoir la conservation de l'énergie parmi les gros consommateurs, tout en maintenant la neutralité des recettes en réduisant le tarif du premier palier. Cette modification du tarif a été motivée par un désir de réduire la consommation d'électricité chez les gros utilisateurs. La ville de New Westminster, quant à elle, n'a pas adopté le tarif à paliers croissants. Les consommateurs de New Westminster sont restés sous un tarif fixe, tandis que les clients de BC Hydro dans les villes voisines ont basculé vers un tarif à paliers croissants.
+
+\vspace{1em}
+En termes de politique, la mécompréhension des tarifs a des implications pour la fixation des taux, pouvant éloigner les décideurs de leurs objectifs initiaux. En matière de bien-être, cela peut causer des pertes financières pour les ménages mal informés. L'auteur met également en garde contre l'utilisation exclusive d'effets moyens pour analyser la réactivité des consommateurs, soulignant l'importance de prendre en compte la diversité des perceptions des prix.
+
+\vspace{1em}
+Ils constatent que les ménages rationnels montrent des élasticités cohérentes avec les données réelles, tandis que les paresseux ne montrent aucune réaction significative aux prix marginaux. Les ménages confus, en revanche, réagissent de manière excessive par rapport aux données réelles.
+
+\vspace{1em}
+Les auteurs concluent que le mélange de ces types de ménages est plus plausible que de supposer que tous les consommateurs réagissent de la même manière. Ils estiment qu'un mélange de 85 % de paresseux, 7 % de rationnels et 8 % de confus sont le plus proche des données réelles.
+
+\vspace{1em}
+Ils discutent également des implications politiques de la perception erronée des tarifs. Par exemple, la perception erronée peut entraîner une augmentation de la consommation d'électricité, mais aussi une diminution des coûts pour les producteurs. Cependant, les impacts sur le surplus du consommateur et les coûts sociaux.
+
+\vspace{1em}
+En fin de compte, le document suggère que les politiques tarifaires devraient être conçues en tenant compte de la diversité des réponses des consommateurs, y compris la possibilité de perception erronée des tarifs. Les résultats indiquent que des tarifs plats, plutôt que des tarifs non linéaires, sont plus susceptibles d'encourager la conservation de l'énergie.
+
+
+### Quelle tarification adopter en présence d'un biais
+
+Enfin de manière plus théorique, l'article de David Martimort ”Non-linear pricing with average price biais” (2020) aborde cette notion avec un autre point de vue.
+Dans cet article David Martimort cherche à trouver la tarification non-linéaire optimale sachant que les consommateurs ont une perception biaisée du prix marginal, il prend ce biais comme une variable exogène.
+
+\vspace{1em}
+Concept de biais du prix moyen et de ses implications sur le comportement des consommateurs et les stratégies de tarification optimales par un monopole. 
+Hypothèse comportementale du biais du prix moyen :
+
+\vspace{1em}
+Les consommateurs peuvent utiliser incorrectement le prix moyen lorsqu'ils prennent des décisions de consommation.
+Le problème du choix du consommateur consiste à maximiser l'utilité moins le prix moyen perçu en fonction de la quantité.
+Deux modèles sont proposés pour rationaliser ce comportement : un modèle d'apprentissage avec biais de spécification erronée et un mécanisme de communication exploitant ce biais.
+Applicabilité et loyers de courbure :
+
+\vspace{1em}
+Les allocations applicables sont celles où le prix équivaut à l'utilité marginale perçue.
+Le surplus du consommateur est positif en raison de la courbure de la fonction d'utilité, appelée loyer de courbure marginale.
+Les consommateurs obtiennent un surplus positif, et leur contrainte de participation est satisfaite.
+Tarification non linéaire optimale avec biais du prix moyen :
+
+\vspace{1em}
+Le monopole maximise le profit attendu sous contrainte d'applicabilité.
+L'allocation optimale est indépendante de la distribution des types.
+Il n'y a pas de loyers d'information, mais il existe des loyers de courbure.
+La consommation est inefficace pour tous les types en raison du compromis entre l'efficacité et les loyers de courbure.
+Le consommateur de plus bas type peut avoir un surplus plus élevé par rapport au cadre non biaisé.
+Les programmes de prix optimaux peuvent présenter des primes de quantité plutôt que des réductions en raison du biais du prix moyen des consommateurs.
+Prédictions empiriques :
+
+\vspace{1em}
+Dans le cadre standard avec des consommateurs rationnels, les prix non linéaires dépendent de la distribution des types et présentent généralement des réductions de quantité.
+Avec un biais du prix moyen, le programme de prix optimal dépend moins de la distribution des types, les prix marginaux augmentent avec la consommation, et le consommateur de plus bas type obtient un loyer positif.
+En résumé, le biais du prix moyen entraîne des écarts par rapport aux modèles de tarification standard, avec des implications pour le bien-être des consommateurs, les stratégies de tarification optimales et les prédictions empiriques.
+
+\vspace{1em}
+Il est intéressant de comparer les bénéfices, le surplus du consommateur et le bien-être dans le modèle standard et le contexte du biais du prix moyen. Pour cela, il est utile de remarquer que le programme du monopole face à des consommateurs biaisés est mathématiquement équivalent à une discrimination parfaite des prix de troisième degré avec des consommateurs non biaisés. 
+
+\vspace{1em}
+Pour illustrer, supposons que le monopole est confronté à une population de consommateurs entièrement rationnels, observe le type de chaque consommateur, mais est contraint d'offrir un prix linéaire à chaque type : c'est-à-dire, $P(q | \theta) = p(\theta)q$. Dans ce cas, les prix optimaux sont déterminés en utilisant la tarification monopolistique standard : Pour tout $\theta$, l'entreprise fait face à une courbe de demande $p = uq(q, \theta)$ et choisit le prix pour maximiser le profit conditionnel à $\theta$. Remarquez cependant que pour n'importe quel prix $p(\theta)$, le revenu généré est $p(\theta)q(\theta) = uq(q(\theta), \theta)q(\theta)$. 
+Cela, bien sûr, est le même revenu gagné dans le cas de consommateurs biaisés par le prix moyen, (3). 
+
+\vspace{1em}
+Par conséquent, l'allocation, le profit et le surplus du consommateur correspondant au cas du biais du prix moyen sont équivalents à ceux découlant de la discrimination parfaite des prix de troisième degré. Les comparaisons de bien-être entre les paramètres du biais du prix moyen et des consommateurs rationnels sont équivalentes à des comparaisons entre la discrimination de troisième et de deuxième degré des prix.
+
+\newpage
+
+# 2) Biais de perception
+
+Dans la théorie économique classique la disposition à payer d'un consommateur dépend entièrement de ses préférences (et de sa contrainte budgétaire), par exemple, certains consommateurs sont prêts à payer plus pour une adhésion à un club de remise en forme parce qu’ils bénéficient d’un plus grand avantage en tant qu’adhésion. 
+
+\vspace{1em}
+Ces consommateurs peuvent être des artistes dont la carrière dépend d'un corps bien sculpté, ou ils peuvent profiter d'un bénéfice direct de l'entraînement, ou encore ils peuvent bénéficier du statut qui accompagne l'adhésion à un club de remise en forme prestigieux. D'autres consommateurs ont des préférences différentes : ils bénéficient d'un moindre avantage en tant qu'adhérents à un club de gym et sont donc prêts à payer moins pour cela. 
+
+La WTP, dans le modèle standard, est avant tout une question de préférences.
+
+\vspace{1em}
+Cependant, celle-ci néglige bien souvent l'aspect de perception des prix. Prenons par exemple l'adhésion à un club de gym. Supposons que le consommateur A et le consommateur B aient des préférences identiques et bénéficient d'un avantage identique (qui peut être basé sur la santé, l'esthétique ou le statut) en fréquentant un club de gym. 
+
+\vspace{1em}
+Supposons en outre qu'A et B ne fréquenteront pas le club plus d'une fois par mois, ce qui limite inévitablement les avantages qu'ils tirent de leur adhésion. Pourtant, alors que A se rend compte qu'elle ne fréquentera le club qu'une fois par mois, B croit à tort qu'il y participera au moins une fois par semaine et surestime ainsi les avantages de l'adhésion. Cette perception erronée aura un effet substantiel sur la WTP de B ; il serait prêt à payer plus pour son adhésion au club de remise en forme qu'A. 
+
+Même des consommateurs ayant des préférences (et des contraintes budgétaires) identiques peuvent avoir des mesures de WTP très différentes. La WTP est fonction à la fois des préférences et de la (mauvaise) perception.
+
+\vspace{1em}
+Dans un marché concurrentiel, le vendeur ne bénéficie d'aucun surplus : il vend son produit à un prix PC, qui est précisément égal à son coût de production unitaire. Par conséquent, le bien-être social est égal au surplus du consommateur représenté par le triangle hachuré. C'est le cas ci-dessous:
+
+![Modèle standard](modèle standard.png){width="50%"}
+
+
+\newpage
+
+Mais lorsque cette disposition à payer reflète à la fois des préférences et des perceptions erronées, le préjudice causé aux consommateurs augmente car ceux-ci paient un prix égal au bénéfice perçu, qui dépasse leur bénéfice réel. Dans le graphique ci-dessous on peut voir que certains consommateurs subissent une véritable perte:
+
+![Biais de perception](misperception loss.png){width="50%"}
+
+En matière de bien-être, les consommateurs dans la fourchette [0, QC] bénéficient toujours du même surplus du consommateur que dans le cas sans perception erronée. Cet excédent est représenté par le triangle avec des points noirs. 
+
+\vspace{1em}
+Ces consommateurs croient à tort qu’ils obtiennent un surplus encore plus important – le surplus supplémentaire perçu est représenté par le trapèze ombré ascendant (au-dessus de la courbe d’offre) – mais cette fausse croyance ne leur fait pas de mal. Il existe cependant un autre groupe de consommateurs qui subit un préjudice. Les consommateurs, dans la gamme [QC, QC'], ne devraient pas acheter le produit. Ils achètent uniquement à cause d'une perception erronée : ils surestiment la valeur du produit. 
+
+\vspace{1em}
+Ces achats créent une perte de bien-être, qui est à la fois une perte d’efficacité et une perte pour les consommateurs (c’est-à-dire que les consommateurs supportent la totalité de la perte d’efficacité). Cette perte est représentée par le triangle hachuré ascendant (sous la courbe d’offre).
+
+\vspace{1em}
+À noter qu'il existe différentes manières de lutter contre la discrimination par les prix, soit de manière institutionnelle, le régulateur peut interdire la discrimination par les prix, il peut également fixer un plafond de discrimination par les prix ou encore empêcher l'accès aux données personnelles du consommateur. Cela peut aussi se faire de manière moins formelle à travers par exemple des plateformes qui permettent des comparaisons entre les prix.
+
+# 3) Biais vers le prix moyen
+
+Nous cherchons à étudier l'impact de perceptions erronées sur la demande des consommateurs, plus précisément dans le cas où ceux-ci utiliseraient le prix moyen pour estimer leur consommation.
+
+## 3.1 Fonction d'utilité Cobb-Douglas
+
+Nous allons modéliser un marché de l'eau avec un producteur pratiquant un tarif non linéaire comprenant une partie fixe et une partie variable.
+Chaque consommateur a une fonction d'utilité $U(z, x)$ avec $x$ sa quantité d'eau consommée en $m^3$, z sa consommation pour d'autres biens, R son revenu. La contrainte budgétaire de chaque consommateur est : $$\text{F + px + z $\leq$ R}$$
+
+Nous modéliserons ces fonctions d'utilité par des fonctions du type Cobb-Douglas :
+$${u(x,z) = b*x^{\alpha}*z^{\beta}}$$.
+
+Le producteur tarifie à un prix marginal $p$ toute unité de consommation. La demande peut alors être décrite comme suit :
+
+\begin{enumerate}
+  \item Si le consommateur est parfaitement rationnel, son utilité maximale est donnée par:
+    $$\max_{x,z} u(x,z) =  b*x^{\alpha}*z^{\beta} \Leftrightarrow b*x^{\alpha}*(R - F -px)^{\beta}$$
+    ce qui donne pour fonction de demande:
+    $$x^{*} = \frac{\alpha}{\alpha + \beta} \cdot \frac{R - F}{p}$$
+  \item Si le consommateur se base sur un prix moyen mais qu'il utilise la bonne formule pour le prix moyen, son utilité maximale est donnée par:
+    $$\max_{x} u(x) = b*x^{\alpha}*(R -\bar{p}(x) \cdot x)^{\beta}$$
+    avec $\bar{P}(x) = \frac{F}{x} + p$
+    on retrouve la même fonction de demande:
+    $$x^{*} = \frac{\alpha}{\alpha + \beta} \cdot \frac{R - F}{p}$$
+  \item Enfin, si le consommateur n'utilise pas la bonne formule pour le prix moyen, son utilité sera donnée par:
+\end{enumerate}
+    $$ u(x) = b*x^{\alpha}*(R -\bar{p}(x) \cdot x)^{\beta}$$
+    avec $\bar{p}(x) = \frac{F}{x} + p$
+    ce qui donne pour fonction de demande:
+    $$x^{**} = \frac{\alpha}{\alpha + \beta} \cdot \frac{R - \frac{\alpha + \beta}{\alpha} \cdot F}{p}$$
+    
+Nous avons donc 2 fonctions de demandes à analyser.
+
+```{r}
+# Définir la fonction p_bar(x)
+p_bar <- function(F, x, p) {
+  return(F / x + p)
+}
+
+# Paramètres
+F <- 10  # Valeur arbitraire pour F
+p <- 3   # Valeur arbitraire pour p
+
+# Générer des valeurs pour x
+x_values <- seq(1, 15, by = 0.1)
+
+# Calculer les valeurs correspondantes de p_bar(x)
+p_bar_values <- p_bar(F, x_values, p)
+ylim_lower <- 0  
+ylim_upper <- 10
+
+# Tracer le graphique
+plot(x_values, p_bar_values, type = "l", lwd = 1.5, col = 2,
+     xlab = "x", ylab = "P_bar(x)",
+     main = expression(paste("Average Price")),
+     ylim = c(ylim_lower, ylim_upper),
+     xlim = c(0, 15),
+     lty = 2,
+      axes = FALSE)
+axis(1)
+axis(2)
+
+abline(h = 1:10, v = 5:10, col = "lightgray", lty = 3)
+abline(h = p, col = "gray60", lwd = 1.5)
+text(0, p, "p", pos = 3)
+```
+
+Comme on peut le voir sur le graphique ci-dessus, en présence de tarifs binômes le prix moyen est décroissant, sera toujours supérieur au prix marginal et se rapproche de ce dernier à mesure que les quantités augmentent. Lorsque les prix sont non-linéaire, les consommateurs, en se basant sur le prix moyen vont avoir tendance à surestimer le prix marginal et donc avoir un niveau de demande optimale plus faible qu'avec le prix marginal. L'intérêt de cette étude va donc être d'essayer de rendre compte des perceptions d'un échantillon de consommateurs, et de voir quelles pourraient être les causes et les conséquences de la présence d'un biais vers le prix moyen.
+
+\newpage
+
+## 3.2 Fonction d'utilité quasi-linéaire
+
+Si le consommateur est parfaitement rationnel, son utilité maximale est donnée par:
+    $$\max_{x,z} u(x,z) =  \theta*x - \gamma*x^2 + z$$
+    $$\Leftrightarrow  \theta*x - \gamma*x^2 + (R - F - px)$$
+    avec $\gamma > 0$ et $\theta \sim \mathcal{U}(\theta_{0},\theta_{1})$
+    ce qui donne pour fonction de demande:
+    $$x^{*} = \frac{\theta - p}{\gamma}$$
+
+Si le consommateur se base sur un prix moyen mais qu'il utilise la bonne formule pour le prix moyen, il aura pour utilité maximale :
+    $$\max_{x} u(x) = \theta*x - \gamma*x^2 + (R - F - px)$$
+    avec $\bar{P}(x) = \frac{F}{x} + p$
+    on retrouve la même fonction de demande:
+    $$x^{*} = \frac{p}{2}$$
+
+Enfin, si le consommateur n'utilise pas la bonne formule pour le prix moyen, il aura pour utilité:
+    $$ u(x) = \theta*x - \gamma*x^2 + (R - F - px)$$
+    avec $\bar{p}(x) = \frac{F}{x} + p$
+    ce qui donne pour fonction de demande:
+    $$x^{**} = \frac{\theta + p + 2\sqrt{2\gamma}}{2\gamma}$$
+À présent regardons l'élasticité-prix de la demande:
+    $$\epsilon_{p} = - \frac{p}{x^{*}(p)} \cdot \frac{\partial x^{*}(p)}{\partial p}$$
+Dans le cas du consommateur rationnel 
+        $$x^{*} = \frac{\theta - p}{\gamma} \ \text{donc} \ \epsilon^{1}_{p} = \frac{-p}{\theta - p}$$
+Dans le cas d'un consommateur au comportement biaisé 
+        $$x^{**} = \frac{\theta + p + 2\sqrt{2\gamma}}{2\gamma} \ On \ a \ donc, $$
+        $$\epsilon^{2}_{p} = \frac{-p}{\theta + F + 2\sqrt{F\gamma}}$$
+Si $\frac{(\theta + 3p)^2}{4\gamma} > F$ alors les consommateurs sujets à un biais vers le prix moyen auront une demande optimale inférieure aux consommateurs parfaitements rationnels.
+
+Lorsque l'on compare les élasticités-prix, on s'aperçoit que les consommateurs avec un biais vers le prix moyen on une élasticité beaucoup moins forte que les consommateurs rationnels, ils sont donc moins sensibles à des variations du prix marginal de l'eau, soit une augmentation du prix entraînera une diminution proportionnellement plus petite de la quantité demandée.
+
+
+\newpage
+
+# 4) Réalisation d'un sondage
+
+Nous avons réalisé un sondage afin de tester les connaissances de nos répondants sur la tarification de l'eau en métropole Tourangelle. Ce questionnaire a été envoyé à un échantillon de près de 400 personnes, dont principalement des étudiants de L1 et de master d'conomie de l'Université de Tours, ainsi que des membres du Club d'Aviron de Tours, seules 23 personnes ont participé à notre sondage. Ces réponses, bien que limitées en nombre, fournissent des informations précieuses sur la perception et la compréhension de la tarification de l'eau dans notre échantillon.
+Notre base de données contient 23 observations pour 9 variables.
+
+Ce sondage a donc pour objectif d'analyser les habitudes de consommation d'eau des répondants, d'examiner les facteurs qui influencent ces habitudes, d'explorer les attitudes envers la tarification de l'eau et de comprendre les perceptions et les opinions des individus concernant les différentes structures tarifaires, y compris les prix fixes et progressifs.
+
+Avant de commencer à analyser le sondage, voici les tarifs valables pour pour l'ensemble des usagers des communes de Tours, Saint-Cyr-sur-Loire, Saint Avertin, La-Membrolle-sur-Choisille et Saint Pierre des Corps bénéficiant du service public de l’assainissement collectif.
+
+
+![Part fixe du tarif](tarif eau fixe.png){width="50%"}
+
+![Part variable du tarif](tarif eau variable.png){width="50%"}
+
+```{r}
+occurrences_logement <- table(data$Type_logement)
+
+# Créer un data frame à partir des occurrences
+donnees_occurrences_logement <- data.frame(
+  categorie = names(occurrences_logement),
+  count = as.numeric(occurrences_logement)
+)
+```
+
+```{r}
+col_marron <- "#6f4e37"
+col_bleu <- "#003399"
+```
+
+```{r}
+cam_1 <- ggplot(data = donnees_occurrences_logement, aes(x = "", y = count, fill = categorie)) +
+  geom_bar(width = 1, color = "white", stat = "identity", alpha = 0.95) +
+  coord_polar(theta = "y") +
+  labs(title = "Répartition du type de logement", fill = "Type de logement") +
+  theme_void() +
+  geom_text(aes(label = paste0(round((count/sum(count)),2))),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values=c(col_marron, col_bleu))
+```
+
+```{r}
+occurrences_residence <- table(data$Lieu_residence)
+
+# Créer un data frame à partir des occurrences
+donnees_occurrences_residence <- data.frame(
+  categorie = names(occurrences_residence),
+  count = as.numeric(occurrences_residence)
+)
+```
+
+```{r}
+cam_2 <- ggplot(data = donnees_occurrences_residence, aes(x = "", y = count, fill = categorie)) +
+  geom_bar(width = 1,color = "white", show.legend = TRUE, stat = "identity", alpha = 0.95) + coord_polar(theta = "y") +
+  labs(title = "Lieu de résidence",fill = "Lieu_residence") +
+  theme_void() +
+  geom_text(aes(label = paste0(round((count/sum(count)),2))),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values=c(col_marron, col_bleu))
+```
+
+```{r}
+occurrences_prix <- table(data$Prix_eau_m3)
+
+# Créer un data frame à partir des occurrences
+donnees_occurrences_prix <- data.frame(
+  categorie = names(occurrences_prix),
+  count = as.numeric(occurrences_prix)
+)
+```
+
+```{r}
+cam_3 <- ggplot(data = donnees_occurrences_prix, aes(x = "", y = count, fill = categorie)) +
+  geom_bar(width = 1, color = "white", stat = "identity", alpha = 0.95) +
+  coord_polar(theta = "y") +
+  labs(title = "Connaissance du prix de l'eau", fill = "Connaissez-vous le prix") +
+  theme_void() +
+  geom_text(aes(label = paste0(round((count/sum(count)),2))),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values=c(col_marron, "#882333", col_bleu))
+```
+
+```{r}
+occurrences_prix_progressif <- table(data$Prix_eau_progressif)
+
+# Créer un data frame à partir des occurrences
+donnees_occurrences_prix_progressif <- data.frame(
+  categorie = names(occurrences_prix_progressif),
+  count = as.numeric(occurrences_prix_progressif)
+)
+```
+
+```{r}
+cam_4 <- ggplot(data = donnees_occurrences_prix_progressif, aes(x = "", y = count, fill = categorie)) +
+  geom_bar(width = 1, color = "white", stat = "identity", alpha = 0.95) +
+  coord_polar(theta = "y") +
+  labs(title = "Progressivité du prix de l'eau", fill = "Le prix de l'eau est-il progressif") +
+  theme_void() +
+  geom_text(aes(label = paste0(round((count/sum(count)),2))),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values=c(col_marron, col_bleu))
+```
+
+```{r}
+(cam_1 + cam_2)/ (cam_3 + cam_4)
+```
+
+Sur ce graphique, on peut voir que la plupart de nos répondants sont en appartement, et résident en métropole Tourangelle. Seul 1/3 de nos répondants pensent connaître le prix de l'eau. Plus d'un tiers de nos répondants pensent à tort que le prix de l'eau n'est pas progressif.
+
+```{r}
+data$prix_m3 <- factor(data$prix_m3, levels = c("0 - 0,50(€)", "0,50 - 1(€)", "1 - 1,50(€)","1,50 - 2(€)",">2(€)"))
+```
+
+
+```{r, out.width='80%'}
+ggplot(data = data, aes(x = prix_m3, fill = prix_m3)) +
+  geom_bar(color = "white", show.legend = FALSE) +
+  labs(title = "Prix supposé de l'eau au m3", x = "Prix du m³", y = "Nombre de réponses") +
+  theme_minimal()
+```
+
+En janvier 2023 le tarif moyen du m³ d'eau en métropole tourangelle était de 1.23€, on peut voir que la réponse qui ressort le plus est la bonne réponse, 1/3 de nos répondants connaissent effectivement le prix de l'eau.
+
+```{r, out.width='80%'}
+data$depense_annuelle_en_eau <- ifelse(grepl("[a-zA-Z]", data$depense_annuelle_en_eau), NA, data$depense_annuelle_en_eau)
+data$depense_annuelle_en_eau <- factor(data$depense_annuelle_en_eau, levels = unique(data$depense_annuelle_en_eau)[order(unique(data$depense_annuelle_en_eau))])
+```
+
+```{r}
+dep <- c(0, 0, 100, 200, 254, 300, 300, 308, 320, 340, 350, 400, 409, 720, 1300, 1800, NA, NA, NA, NA, NA, NA, NA)
+
+# Créer un DataFrame avec les données
+df <- data.frame(depense_annuelle_en_eau = dep)
+
+# Créer l'histogramme en incluant les valeurs manquantes
+ggplot(data = df, aes(x = depense_annuelle_en_eau, fill = factor(depense_annuelle_en_eau))) +
+  geom_histogram(binwidth = 100, color = "white", na.rm = FALSE) + # Garder les valeurs manquantes
+  labs(title = "Dépense annuelle en eau", x = "Montant de la dépense", y = "Nombre de réponses") +
+  theme_minimal()
+```
+
+Nos répondants dépensent entre 100 et 1800€ annuellement pour leur consommation d'eau dont plus de 3/4 d'entre eux qui dépensent moins de 410€ par an.
+
+```{r}
+data$Partie_fixe_facture <- ifelse(grepl("[a-zA-Z]", data$Partie_fixe_facture), NA, data$Partie_fixe_facture)
+data$Partie_fixe_facture <- factor(data$Partie_fixe_facture, levels = unique(data$Partie_fixe_facture)[order(unique(data$Partie_fixe_facture))])
+```
+
+```{r, out.height='80%'}
+ggplot(data = data, aes(x = Partie_fixe_facture, fill = Partie_fixe_facture)) +
+  geom_bar(color = "white") +
+  labs(title = "Répartition de la partie fixe de la facture", x = "Montant de la partie fixe", y = "Nombre de réponses", fill = "Partie fixe abonnement") +
+  theme_minimal()
+```
+Sur ce graphique on peut voir que le montant de l'abonnement payé par nos répondants est assez cohérent avec les prix pratiqués en métropole Tourangelle.
+
+
+```{r}
+data$Consommation_annuelle_m3 <- ifelse(grepl("[a-zA-Z]", data$Consommation_annuelle_m3), NA, data$Consommation_annuelle_m3)
+data$Consommation_annuelle_m3 <- gsub("€", "", data$Consommation_annuelle_m3)
+```
+
+```{r, out.width="80%"}
+data$Consommation_annuelle_m3 <- as.numeric(as.character(data$Consommation_annuelle_m3))
+
+# Essayer de créer à nouveau l'histogramme
+ggplot(data = data, aes(x = Consommation_annuelle_m3, fill = ..count..)) +
+  geom_histogram(binwidth = 40, color = "white") +
+  labs(title = "Histogramme de la consommation annuelle d'eau",
+       x = "Consommation annuelle d'eau (m³)",
+       y = "Fréquence") +
+  theme_minimal()
+```
+
+La consommation annuelle des répondants est comprise entre 100 et 300m³ d'eau.
+
+```{r}
+occurrences <- table(data$Efforts_reduction_eau)
+
+# Créer un data frame à partir des occurrences
+donnees_occurrences <- data.frame(
+  categorie = names(occurrences),
+  count = as.numeric(occurrences)
+)
+```
+
+```{r, out.height='80%'}
+ggplot(data = donnees_occurrences, aes(x = "", y = count, fill = categorie)) +
+  geom_bar(width = 1, color = "white", stat = "identity") +
+  coord_polar(theta = "y", start = 0) +
+  labs(title = "Efforts de consommation", fill = "categories")  +
+  theme_void() +
+  geom_text(aes(label = paste0(round((count/sum(count)),2))),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values=c("#882333", "darkgreen", col_bleu, "cornsilk4"))
+```
+
+Près de 3/4 des répondants reconnaissent faire des efforts pour réduire le prix de leur dépense en eau.
+
+Nous tenons à préciser que la participation volontaire des répondants peut avoir introduit un biais de sélection, ce qui pourrait affecter la généralisation de nos conclusions.
+Les réponses autodéclarées des participants peuvent introduire des biais liés à la subjectivité et à la précision des informations fournies.
+Des limitations en matière de temps et de ressources pourraient avoir restreint notre capacité à explorer toutes les dimensions pertinentes du sujet de manière exhaustive.
+
+\newpage
+
+# 5) Conclusion
+
+L'ignorance du prix de l'eau peut indiquer un manque de sensibilisation quant à sa valeur réelle. Cela souligne la nécessité d'éduquer les utilisateurs sur l'importance de la conservation de l'eau et des ressources en général. Le fait que la population ignore le prix de l'eau peut refléter une politique tarifaire opaque ou peu transparente. Cela peut être problématique car on sait que de meilleures connaissances sur la tarification de l'eau perméttrait d'augmenter légèrement le niveau de consommation global et donc d'améliorer le bien être social.
+
+Des chocs exogènes rendant les prix très fluctuants peuvent également expliquer une certaines méconnaissance des tarifs, cette méconnaissance peut aussi s'expliquer par le fait que c'est souvent la personne qui règle la facture qui connaît le mieux le prix de l'eau ainsi que la quantité consommée par le foyer.
+
+L'absence de connaissances sur le prix de l'eau pourrait également signaler des lacunes dans la diffusion d'informations importantes aux citoyens. Il pourrait être nécessaire d'améliorer la communication des tarifs de l'eau et des politiques associées. 
+
+Les répondants connaissent mieux les coûts que les quantités consommées, car en effet le raisonnement des consommateurs n'est pas le même que celui des fournisseurs.
+
+Pour nos consommateurs:
+\textbf{Consommation = Douche + Linge + Vaisselle + ...}
+
+Tandis que pour les fournisseurs:
+\textbf{Consommation = $xm^3$}
+
+\vspace{1em}
+On observe des difficultés de perception sur les unités consommées, notamment sur ce que représente $1m^3$ d'eau, ou encore sur ce que représente $1m^3$ d'eau en matière de consommation, soit de litres d'eau.
+Seul 1/4 de la population sait qu'une douche représente environ 70 litres d'eau en moyenne contre 175 litres pour un bain, or encore moins de personnes savent ce que représente une douche en termes d'euros (environ 27 centimes d'euros).
+
+\vspace{1em}
+On a donc deux approches totalement différente de la consommation autour de ce marché, d'un côté les consommateurs qui raisonnent en matière de services rendu, soit du besoin que leur consommation d'eau vient combler (se laver etc.), alors que les fournisseurs raisonnent en matières de $m^3$ d'eau consommés selon le barème tarifaires choisi.
+    
+Nos données indiquent bien la présence d'un biais vers le prix moyen, les consommateurs ont tendance à surestimer le prix marginal de l'eau car le voient comme un prix moyen unitaire de leur consommation.
+
+\vspace{1em}
+En explorant les nuances de la perception des prix et l'impact de ces perceptions sur la consommation d'eau, notre recherche met en évidence l'importance cruciale de comprendre la tarification de l'eau pour réduire le niveau de consommation.
+Les résultats démontrent que les biais de perception des prix peuvent conduire à des décisions de consommation sous-optimales, soulignant ainsi la nécessité pour les autorités de régulation de concevoir des stratégies tarifaires qui sont psychologiquement plus intuitives.
+
+En outre, cette recherche souligne l'importance d'adopter une approche multidisciplinaire pour la tarification de l'eau, en intégrant des connaissances issues de la psychologie comportementale, de l'économie et des sciences environnementales. Une telle approche peut aider à concevoir des systèmes de tarification qui non seulement encouragent une utilisation durable de l'eau mais qui sont également perçus comme plus justes et acceptables par les consommateurs.
+L'éducation des consommateurs et la simplification des structures tarifaires, peuvent aider à atténuer les biais de perception.
+
+
+\newpage
+
+# Bibliographie
+
+\textbf{Oren Bar-Gill}. \textit{"Algorithmic price discrimination when demand is a function of both preferences and (mis)perceptions", University of Chicago Law Review, Vol. 86}. 2018.
+
+\textbf{Agnès Walser-Luchesi}. \textit{"Comment améliorer l'estimation du gain perçu et l'éfficacité commerciale?", dans La Revue des Sciences de Gestion 2019/5-6}. 2019.
+
+\textbf{Severin Borenstein}. \textit{"To what electricity price do consumers respond?", Center for the Study of Energy Markets (CSEM)}. 2019.
+
+\textbf{Blake Shaffer}. \textit{"Rational, lazy or confused", Technical report, Working paper}. 2018.
+
+\textbf{Koichiro Ito}. \textit{"Do consumers respond to marginal or average price ?", The American Economic Review Vol. 104, No.2}. 2013.
+
+\textbf{Koichiro Ito}. \textit{"How do consumers respond to non-linear pricing?", Energy Institute at Haas Working Paper }. 2014.
+
+\textbf{David Martimort}. \textit{"Non-linear pricing with average price biais", American Economic Review}. 2020.
+
+\textbf{Phuong Ho}. \textit{"Nonlinear pricing, biased consumers, and regulatory policy", Journal of Economics}. 2022.
+
+\textbf{Shanthi Nataraj}. \textit{"Does marginal price matter?", Journal of Environmental Economics and Management 61}. 2009.
+
+\newpage
+
+# Annexe
+
+Lien vers le questionnaire Google Form:
+\url{https://forms.gle/oSpopaZPmAngrUWv8}
+
+Les questions:
+
+1) Êtes-vous dans un appartement ou un logement individuel?
+\vspace{0.5em}
+2) Où se situe votre lieu de résidence?
+\vspace{0.5em}
+3) Connaissez-vous le prix de l'eau qui vous est facturé au m3?
+\vspace{0.5em}
+4) Pensez-vous qu'il est compris entre: $0-0.50$€ / $1-1.50$€ / $1.50-2$€ / $>2$€
+\vspace{0.5em}
+5) Quelle est votre dépense annuelle en eau (le montant qui vous est facturé)?
+\vspace{0.5em}
+6) Votre facture comprend une partie fixe indépendante de la consommation (abonnement), quel est ce montant? 
+\vspace{0.5em}
+7) Quelle est votre consommation annuelle d'eau en m3?
+\vspace{0.5em}
+8) Est-ce que selon vous le prix de l'eau est progressif, en fonction de votre niveau de consommation?
+\vspace{0.5em}
+9) Pensez-vous faire des efforts pour réduire votre consommation d'eau? Si oui, les faites-vous pour des raisons écologiques ou économiques?
+
+# Remerciements
+
+Nous souhaitons exprimer notre sincère gratitude à M. Bousquet pour sa précieuse contribution à ce projet sur la tarification de l'eau. Sa participation active et son expertise ont grandement enrichi notre recherche et ont été essentielles à la réussite de ce travail.
+
+\vspace{1.5em}
+
+Nous tenons également à remercier chaleureusement toutes les personnes qui ont contribué de près ou de loin à la réalisation de ce projet, ainsi que toutes les institutions qui ont rendu possible cette collaboration fructueuse.
