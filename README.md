@@ -21,3 +21,6 @@ Dans cette étude nous verons ensembles :
 
 
 **Découvrons ensembles ce qu'est le biais vers le prix moyen**
+
+
+<img src="Sticker.gif" alt="Mon Sticker" width="200" style="display: block; margin-left: auto; margin-right: auto;"/>
